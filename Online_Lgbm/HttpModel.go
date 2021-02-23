@@ -22,7 +22,6 @@ type result struct {
 */
 func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	fmt.Println("path == ", r.URL.Path) // 路由
 	fmt.Println("feature == ", r.Form["feature"][0])
 
 	if r.Form["feature"] == nil || len(r.Form["feature"]) == 0 || r.Form["feature"][0] == "" {
@@ -43,6 +42,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println("feature_into == ", f)
+	fmt.Println("feature_into_time == ", time.Now())
 	predictData := forecast(f)
 	result := result{Status: true, Code: 0, Data: predictData}
 	resultJsonStr, _ := json.Marshal(result)
@@ -53,7 +53,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 关闭http
 */
 func SayBye(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("bye bye ,shutdown the server")) // 没有输出
+	w.Write([]byte("bye bye ,shutdown the server"))
 	err := server.Shutdown(nil)
 	if err != nil {
 		log.Fatal([]byte("shutdown the server err"))
@@ -91,10 +91,11 @@ func main() {
 	err := server.ListenAndServe()
 	if err != nil {
 		if err == http.ErrServerClosed {
-			log.Fatal("Server closed under request")
+			log.Fatal("Server closed under request", time.Now())
 		} else {
-			log.Fatal("Server closed unexpected", err)
+			log.Fatal("Server closed unexpected", time.Now(), err)
 		}
 	}
 	log.Fatal("Server exited")
+
 }
