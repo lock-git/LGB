@@ -21,15 +21,29 @@ type result struct {
 模型预测
 */
 func LgbPredict(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	fmt.Println("feature == ", r.Form["feature"][0])
 
+	var beginTime = time.Now().UnixNano() / 1e6
+	fmt.Println("initModel_start == ", beginTime)
+
+	r.ParseForm()
 	if r.Form["feature"] == nil || len(r.Form["feature"]) == 0 || r.Form["feature"][0] == "" {
 		result := result{Status: true, Code: -1, Data: "ERROR:feature参数不能为nil"}
 		nilJsonErr, _ := json.Marshal(result)
 		w.Write(nilJsonErr)
 		return
 	}
+
+	if r.Form["modelName"] == nil || len(r.Form["modelName"]) == 0 || r.Form["modelName"][0] == "" {
+		result := result{Status: true, Code: -1, Data: "ERROR:modelName参数不能为nil"}
+		nilJsonErr, _ := json.Marshal(result)
+		w.Write(nilJsonErr)
+		return
+	}
+
+	initModel(r.Form["modelName"][0])
+
+	var initModelEndTime = int32(time.Now().UnixNano() / 1e6)
+	fmt.Println("initModel_duration == ", initModelEndTime-int32(beginTime))
 
 	var f FeatureData
 	var json2 = jsonIter.ConfigCompatibleWithStandardLibrary
@@ -41,12 +55,15 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 		w.Write(errJson)
 		return
 	}
-	fmt.Println("feature_into == ", f)
+	//fmt.Println("feature_into == ", f)
 	fmt.Println("feature_into_time == ", time.Now())
 	predictData := forecast(f)
 	result := result{Status: true, Code: 0, Data: predictData}
 	resultJsonStr, _ := json.Marshal(result)
 	w.Write(resultJsonStr)
+
+	var predictEndTime = int32(time.Now().UnixNano() / 1e6)
+	fmt.Println("predict_duration == ", predictEndTime-initModelEndTime)
 }
 
 /*
@@ -64,8 +81,6 @@ func SayBye(w http.ResponseWriter, r *http.Request) {
 var server *http.Server
 
 func main() {
-
-	initModel()
 
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)

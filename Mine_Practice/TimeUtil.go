@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -67,6 +68,8 @@ func SubDateFun() {
 	// Add 时间相加
 	now := time.Now()
 	fmt.Println("当前时间：", now)
+	fmt.Println("当前时间-毫秒s：", strconv.FormatInt(time.Now().UnixNano()/1e6, 10))
+	fmt.Println("当前时间-毫秒：", time.Now().UnixNano()/1e6)
 
 	// 10分钟前
 	m, _ := time.ParseDuration("-10m")
