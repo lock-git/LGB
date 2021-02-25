@@ -106,9 +106,9 @@ func main() {
 	err := server.ListenAndServe()
 	if err != nil {
 		if err == http.ErrServerClosed {
-			log.Fatal("Server closed under request", time.Now())
+			log.Fatal("Server closed under request \n", time.Now())
 		} else {
-			log.Fatal("Server closed unexpected", time.Now(), err)
+			log.Fatal("Server closed unexpected \n", time.Now(), err)
 		}
 	}
 	log.Fatal("Server exited")
