@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/dmitryikh/leaves"
 )
 
@@ -13,7 +12,7 @@ type FeatureData struct {
 
 var model *leaves.Ensemble
 
-func forecast(data FeatureData) []float64 {
+func ForecastLgb(data FeatureData) []float64 {
 
 	predictions := make([]float64, data.Rows*model.NOutputGroups())
 	// specify num of threads and do predictions
@@ -21,13 +20,13 @@ func forecast(data FeatureData) []float64 {
 	return predictions
 }
 
-func initModel(fileName string) {
+func InitModel(fileName string) error {
 	// lgb_ranker.model 放入项目下
 	//model2, err := leaves.LGEnsembleFromFile("lightgbm_model_20210224.txt", true)
 	model2, err := leaves.LGEnsembleFromFile(fileName, true)
 	if err != nil {
-		print(err)
-		fmt.Println("err init model = ", err)
+		return err
 	}
 	model = model2
+	return err
 }
