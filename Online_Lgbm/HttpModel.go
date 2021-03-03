@@ -26,7 +26,8 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	var beginTime = time.Now().UnixNano() / 1e6
 	fmt.Println(time.Now(), "====================== initModel_start...")
 
-	r.ParseForm()
+	// 从请求中解析参数
+	_ = r.ParseForm()
 	if r.Form["feature"] == nil || len(r.Form["feature"]) == 0 || r.Form["feature"][0] == "" {
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:feature参数不能为nil"}
 		nilJsonErr, _ := json.Marshal(result)
