@@ -31,14 +31,14 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	if r.Form["feature"] == nil || len(r.Form["feature"]) == 0 || r.Form["feature"][0] == "" {
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:feature参数不能为nil"}
 		nilJsonErr, _ := json.Marshal(result)
-		w.Write(nilJsonErr)
+		_, _ = w.Write(nilJsonErr)
 		return
 	}
 
 	if r.Form["modelName"] == nil || len(r.Form["modelName"]) == 0 || r.Form["modelName"][0] == "" {
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:modelName参数不能为nil"}
 		nilJsonErr, _ := json.Marshal(result)
-		w.Write(nilJsonErr)
+		_, _ = w.Write(nilJsonErr)
 		return
 	} else {
 		fmt.Println(time.Now(), "====================== model_name:", r.Form["modelName"][0])
@@ -49,7 +49,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 		data := "ERROR：初始化模型失败 " + initModelErr.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
-		w.Write(errJson)
+		_, _ = w.Write(errJson)
 		return
 	}
 
@@ -63,14 +63,14 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 		data := "ERROR：json格式有误 " + err.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
-		w.Write(errJson)
+		_, _ = w.Write(errJson)
 		return
 	}
 
 	predictData := ForecastLgb(f)
 	result := result{Stamp: 0, Code: 0, Msg: "成功", Data: predictData}
 	resultJsonStr, _ := json.Marshal(result)
-	w.Write(resultJsonStr)
+	_, _ = w.Write(resultJsonStr)
 
 	var predictEndTime = int32(time.Now().UnixNano() / 1e6)
 	fmt.Println(time.Now(), "====================== predict_duration:", predictEndTime-initModelEndTime, "ms", "============================================= get serve success")
@@ -80,7 +80,8 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 关闭http
 */
 func SayBye(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("bye bye ,shutdown the server"))
+	_ = r.ParseForm()
+	_, _ = w.Write([]byte("bye bye ,shutdown the server"))
 	err := server.Shutdown(nil)
 	if err != nil {
 		log.Fatal([]byte("shutdown the server err"))
