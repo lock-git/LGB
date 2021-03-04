@@ -56,7 +56,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	var initModelEndTime = int32(time.Now().UnixNano() / 1e6)
 	fmt.Println(time.Now(), "====================== initModel_duration:", initModelEndTime-int32(beginTime), "ms")
 
-	var f FeatureData
+	var f FeatureDataWithEssay
 	var json2 = jsonIter.ConfigCompatibleWithStandardLibrary
 	err := json2.UnmarshalFromString(r.Form["feature"][0], &f)
 	if err != nil {
@@ -67,7 +67,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	predictData := ForecastLgb(f)
+	predictData := ForecastLgbV2(f)
 	result := result{Stamp: 0, Code: 0, Msg: "成功", Data: predictData}
 	resultJsonStr, _ := json.Marshal(result)
 	_, _ = w.Write(resultJsonStr)
