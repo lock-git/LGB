@@ -1,13 +1,19 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	jsonIter "github.com/json-iterator/go"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"reflect"
+	"strings"
 	"time"
 )
 
@@ -18,16 +24,57 @@ type result struct {
 	Data  interface{} `json:"data"`
 }
 
-/*
-模型预测
-*/
+func ParseGZipString(str string) (string, error) {
+
+	fmt.Println("old_str", str)
+	dataByte, byteErr := base64.StdEncoding.DecodeString(str)
+	if byteErr != nil {
+		return "", byteErr
+	}
+	r, gErr := gzip.NewReader(bytes.NewReader(dataByte))
+	if gErr != nil {
+
+		return "", gErr
+	}
+	s, rErr := ioutil.ReadAll(r)
+	if rErr != nil {
+		return "", rErr
+	}
+	return string(s), nil
+}
+
 func LgbPredict(w http.ResponseWriter, r *http.Request) {
+
+	fields := make(map[string]reflect.Value)
+	v := reflect.ValueOf(r).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		fieldInfo := v.Type().Field(i)
+		tag := fieldInfo.Tag
+		name := tag.Get("http")
+		if name == "" {
+			name = strings.ToLower(fieldInfo.Name)
+		}
+		fields[name] = v.Field(i)
+	}
+
+	fmt.Println("fields ====", fields)
+
+	_ = r.ParseForm()
+
+	fmt.Println(r.Form)                              // 将所有传入的参数以map集合的方式打印输出
+	fmt.Println("path == ", r.URL.Path)              // 路由
+	fmt.Println("feature == ", r.Form["feature"][0]) // 第一个参数
+	for k, v := range r.Form {                       // 遍历参数
+		fmt.Println("k == ", k)
+		fmt.Println("v == ", strings.Join(v, ""))
+		fmt.Println("=====================================================================================================================")
+	}
 
 	var beginTime = time.Now().UnixNano() / 1e6
 	fmt.Println(time.Now(), "====================== initModel_start...")
 
 	// 从请求中解析参数
-	_ = r.ParseForm()
+
 	if r.Form["feature"] == nil || len(r.Form["feature"]) == 0 || r.Form["feature"][0] == "" {
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:feature参数不能为nil"}
 		nilJsonErr, _ := json.Marshal(result)
@@ -56,9 +103,19 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	var initModelEndTime = int32(time.Now().UnixNano() / 1e6)
 	fmt.Println(time.Now(), "====================== initModel_duration:", initModelEndTime-int32(beginTime), "ms")
 
+	parseFeature, parseGZipErr := ParseGZipString(r.Form["feature"][0])
+	if parseGZipErr != nil {
+		data := "ERROR：参数解压失败 " + parseGZipErr.Error()
+		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
+		errJson, _ := json.Marshal(result)
+		_, _ = w.Write(errJson)
+		return
+	}
+	fmt.Println(time.Now(), "====================== parseFeature:", parseFeature)
+
 	var f FeatureDataWithEssay
 	var json2 = jsonIter.ConfigCompatibleWithStandardLibrary
-	err := json2.UnmarshalFromString(r.Form["feature"][0], &f)
+	err := json2.UnmarshalFromString(parseFeature, &f)
 	if err != nil {
 		data := "ERROR：json格式有误 " + err.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}

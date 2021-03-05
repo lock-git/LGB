@@ -1,4 +1,4 @@
-package main
+package http_study
 
 import (
 	"log"

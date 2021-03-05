@@ -28,7 +28,7 @@ func ForecastLgb(data FeatureData) []float64 {
 
 	predictions := make([]float64, data.Rows*model.NOutputGroups())
 	// specify num of threads and do predictions
-	model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 8)
+	_ = model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 8)
 	return predictions
 }
 
