@@ -22,6 +22,7 @@ func main() {
 
 	// http中特殊字符转义处理  java ===> String tok = URLEncoder.encode(token,"utf-8")
 	urlStr := "https://cong5.net/post/golang?name=张三&age=20&sex=1+++!^"
+	fmt.Println("url原始字符串 ============== ", urlStr)
 	escapeUrl := url.QueryEscape(urlStr)
 	fmt.Println("url对特殊字符进行编码 ======= ", escapeUrl)
 	enEscapeUrl, _ := url.QueryUnescape(escapeUrl)
