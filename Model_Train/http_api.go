@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 )
 
@@ -47,6 +48,22 @@ func sayHelloName(w http.ResponseWriter, r *http.Request) {
 }
 
 func sayHelloName1(w http.ResponseWriter, r *http.Request) {
+
+	// 查看完整传递参数
+	fields := make(map[string]reflect.Value)
+	v := reflect.ValueOf(r).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		fieldInfo := v.Type().Field(i)
+		tag := fieldInfo.Tag
+		name := tag.Get("http")
+		if name == "" {
+			name = strings.ToLower(fieldInfo.Name)
+		}
+		fields[name] = v.Field(i)
+	}
+
+	fmt.Println("fields 完整参数的map结构 ====", fields)
+
 	r.ParseForm()                                      // 解析参数
 	fmt.Println(r.Form)                                // 将所有传入的参数以map集合的方式打印输出
 	fmt.Println("path == ", r.URL.Path)                // 路由

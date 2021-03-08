@@ -24,26 +24,29 @@ type EssayInfo struct {
 
 var model *leaves.Ensemble
 
-func ForecastLgb(data FeatureData) []float64 {
+func ForecastLgb(data FeatureData) ([]float64, error) {
 
 	predictions := make([]float64, data.Rows*model.NOutputGroups())
 	// specify num of threads and do predictions
-	_ = model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 8)
-	return predictions
+	err := model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 8)
+	return predictions, err
 }
 
-func ForecastLgbV2(data FeatureDataWithEssay) []EssayInfo {
+func ForecastLgbV2(data FeatureDataWithEssay) ([]EssayInfo, error) {
 
 	EssayInfoArr := make([]EssayInfo, data.Rows*model.NOutputGroups())
 	predictions := make([]float64, data.Rows*model.NOutputGroups())
 
-	_ = model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 8)
+	err := model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 8)
+	if err != nil {
+		return EssayInfoArr, err
+	}
 
 	for k, v := range data.EssayIds {
 		EssayInfoArr[k] = EssayInfo{EssayId: v, SortScore: predictions[k]}
 	}
 
-	return EssayInfoArr
+	return EssayInfoArr, err
 }
 
 func InitModel(fileName string) error {

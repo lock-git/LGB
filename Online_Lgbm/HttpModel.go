@@ -12,8 +12,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"reflect"
-	"strings"
 	"time"
 )
 
@@ -26,7 +24,6 @@ type result struct {
 
 func ParseGZipString(str string) (string, error) {
 
-	fmt.Println("old_str", str)
 	dataByte, byteErr := base64.StdEncoding.DecodeString(str)
 	if byteErr != nil {
 		return "", byteErr
@@ -45,35 +42,10 @@ func ParseGZipString(str string) (string, error) {
 
 func LgbPredict(w http.ResponseWriter, r *http.Request) {
 
-	fields := make(map[string]reflect.Value)
-	v := reflect.ValueOf(r).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		fieldInfo := v.Type().Field(i)
-		tag := fieldInfo.Tag
-		name := tag.Get("http")
-		if name == "" {
-			name = strings.ToLower(fieldInfo.Name)
-		}
-		fields[name] = v.Field(i)
-	}
-
-	fmt.Println("fields ====", fields)
-
 	_ = r.ParseForm()
-
-	fmt.Println(r.Form)                              // 将所有传入的参数以map集合的方式打印输出
-	fmt.Println("path == ", r.URL.Path)              // 路由
-	fmt.Println("feature == ", r.Form["feature"][0]) // 第一个参数
-	for k, v := range r.Form {                       // 遍历参数
-		fmt.Println("k == ", k)
-		fmt.Println("v == ", strings.Join(v, ""))
-		fmt.Println("=====================================================================================================================")
-	}
 
 	var beginTime = time.Now().UnixNano() / 1e6
 	fmt.Println(time.Now(), "====================== initModel_start...")
-
-	// 从请求中解析参数
 
 	if r.Form["feature"] == nil || len(r.Form["feature"]) == 0 || r.Form["feature"][0] == "" {
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:feature参数不能为nil"}
@@ -105,13 +77,12 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 
 	parseFeature, parseGZipErr := ParseGZipString(r.Form["feature"][0])
 	if parseGZipErr != nil {
-		data := "ERROR：参数解压失败 " + parseGZipErr.Error()
+		data := "ERROR：feature参数GZip解压失败 " + parseGZipErr.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
 		_, _ = w.Write(errJson)
 		return
 	}
-	fmt.Println(time.Now(), "====================== parseFeature:", parseFeature)
 
 	var f FeatureDataWithEssay
 	var json2 = jsonIter.ConfigCompatibleWithStandardLibrary
@@ -124,10 +95,18 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	predictData := ForecastLgbV2(f)
-	result := result{Stamp: 0, Code: 0, Msg: "成功", Data: predictData}
-	resultJsonStr, _ := json.Marshal(result)
-	_, _ = w.Write(resultJsonStr)
+	predictData, predictErr := ForecastLgbV2(f)
+	if predictErr != nil {
+		data := "ERROR：model prediction fail " + predictErr.Error()
+		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
+		errJson, _ := json.Marshal(result)
+		_, _ = w.Write(errJson)
+		return
+	} else {
+		result := result{Stamp: 0, Code: 0, Msg: "成功", Data: predictData}
+		resultJsonStr, _ := json.Marshal(result)
+		_, _ = w.Write(resultJsonStr)
+	}
 
 	var predictEndTime = int32(time.Now().UnixNano() / 1e6)
 	fmt.Println(time.Now(), "====================== predict_duration:", predictEndTime-initModelEndTime, "ms", "============================================= get serve success")
