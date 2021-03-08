@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"net/url"
 	"unicode/utf8"
 	"unsafe"
 )
@@ -18,6 +19,13 @@ func main() {
 
 	arr := []byte(str)
 	fmt.Println("解压前字节数组 ======= ", arr)
+
+	// http中特殊字符转义处理  java ===> String tok = URLEncoder.encode(token,"utf-8")
+	urlStr := "https://cong5.net/post/golang?name=张三&age=20&sex=1+++!^"
+	escapeUrl := url.QueryEscape(urlStr)
+	fmt.Println("url对特殊字符进行编码 ======= ", escapeUrl)
+	enEscapeUrl, _ := url.QueryUnescape(escapeUrl)
+	fmt.Println("url对特殊字符进行解码 ======= ", enEscapeUrl)
 
 	// zip压缩
 	zipBytes := ZipBytes(arr)
