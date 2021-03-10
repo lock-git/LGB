@@ -45,7 +45,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	_ = r.ParseForm()
 
 	var beginTime = time.Now().UnixNano() / 1e6
-	fmt.Println(time.Now(), "====================== initModel_start...")
+	fmt.Println(time.Now(), "initModel_start...")
 
 	if r.Form["feature"] == nil || len(r.Form["feature"]) == 0 || r.Form["feature"][0] == "" {
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:feature参数不能为nil"}
@@ -60,7 +60,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(nilJsonErr)
 		return
 	} else {
-		fmt.Println(time.Now(), "====================== model_name:", r.Form["modelName"][0])
+		fmt.Println(time.Now(), "model_name:", r.Form["modelName"][0])
 	}
 
 	initModelErr := InitModel(r.Form["modelName"][0])
@@ -73,7 +73,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var initModelEndTime = int32(time.Now().UnixNano() / 1e6)
-	fmt.Println(time.Now(), "====================== initModel_duration:", initModelEndTime-int32(beginTime), "ms")
+	fmt.Println(time.Now(), "initModel_duration:", initModelEndTime-int32(beginTime), "ms")
 
 	parseFeature, parseGZipErr := ParseGZipString(r.Form["feature"][0])
 	if parseGZipErr != nil {
@@ -109,7 +109,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var predictEndTime = int32(time.Now().UnixNano() / 1e6)
-	fmt.Println(time.Now(), "====================== predict_duration:", predictEndTime-initModelEndTime, "ms", "============================================= get serve success")
+	fmt.Println(time.Now(), "predict_duration:", predictEndTime-initModelEndTime, "ms", "get serve success")
 }
 
 /*
