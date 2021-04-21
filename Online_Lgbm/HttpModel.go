@@ -22,6 +22,11 @@ type result struct {
 	Data  interface{} `json:"data"`
 }
 
+type ModelReq struct {
+	Feature   string
+	ModelName string
+}
+
 func ParseGZipString(str string) (string, error) {
 
 	dataByte, byteErr := base64.StdEncoding.DecodeString(str)
@@ -47,23 +52,38 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	var beginTime = time.Now().UnixNano() / 1e6
 	fmt.Println(time.Now(), "initModel_start...")
 
-	if r.Form["feature"] == nil || len(r.Form["feature"]) == 0 || r.Form["feature"][0] == "" {
+	body, err1 := ioutil.ReadAll(r.Body)
+	if err1 != nil {
+		fmt.Printf("read body err, %v\n", err1)
+		return
+	}
+	var modelReq ModelReq
+	err1 = json.Unmarshal(body, &modelReq)
+	if err1 != nil {
+		log.Println("json format error:", err1)
+	}
+
+	//fmt.Println(modelReq)
+
+	defer r.Body.Close()
+
+	if len(modelReq.Feature) == 0 {
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:feature参数不能为nil"}
 		nilJsonErr, _ := json.Marshal(result)
 		_, _ = w.Write(nilJsonErr)
 		return
 	}
 
-	if r.Form["modelName"] == nil || len(r.Form["modelName"]) == 0 || r.Form["modelName"][0] == "" {
+	if len(modelReq.ModelName) == 0 {
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:modelName参数不能为nil"}
 		nilJsonErr, _ := json.Marshal(result)
 		_, _ = w.Write(nilJsonErr)
 		return
-	} else {
-		fmt.Println(time.Now(), "model_name:", r.Form["modelName"][0])
 	}
 
-	initModelErr := InitModel(r.Form["modelName"][0])
+	//initModelErr := lgb_model.InitModel(r.Form["modelName"][0])
+	fmt.Println(modelReq.ModelName)
+	initModelErr := InitModel(modelReq.ModelName)
 	if initModelErr != nil {
 		data := "ERROR：初始化模型失败 " + initModelErr.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
@@ -75,7 +95,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	var initModelEndTime = int32(time.Now().UnixNano() / 1e6)
 	fmt.Println(time.Now(), "initModel_duration:", initModelEndTime-int32(beginTime), "ms")
 
-	parseFeature, parseGZipErr := ParseGZipString(r.Form["feature"][0])
+	parseFeature, parseGZipErr := ParseGZipString(modelReq.Feature)
 	if parseGZipErr != nil {
 		data := "ERROR：feature参数GZip解压失败 " + parseGZipErr.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
@@ -89,6 +109,15 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	err := json2.UnmarshalFromString(parseFeature, &f)
 	if err != nil {
 		data := "ERROR：json格式有误 " + err.Error()
+		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
+		errJson, _ := json.Marshal(result)
+		_, _ = w.Write(errJson)
+		return
+	}
+
+	// 特征长度检验
+	if len(f.Values) != f.Rows*f.Cols {
+		data := "ERROR：特征长度有误,总数为：" + string(len(f.Values)) + "文章数：" + string(f.Rows) + "每篇文章特征数：" + string(f.Cols)
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
 		_, _ = w.Write(errJson)

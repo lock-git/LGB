@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"github.com/dmitryikh/leaves"
+	"time"
 )
 
 type FeatureDataWithEssay struct {
@@ -28,7 +30,7 @@ func ForecastLgb(data FeatureData) ([]float64, error) {
 
 	predictions := make([]float64, data.Rows*model.NOutputGroups())
 	// specify num of threads and do predictions
-	err := model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 8)
+	err := model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 2)
 	return predictions, err
 }
 
@@ -36,8 +38,8 @@ func ForecastLgbV2(data FeatureDataWithEssay) ([]EssayInfo, error) {
 
 	EssayInfoArr := make([]EssayInfo, data.Rows*model.NOutputGroups())
 	predictions := make([]float64, data.Rows*model.NOutputGroups())
-
-	err := model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 8)
+	fmt.Println(time.Now(), "特征总数：", len(data.Values), "文章篇数：", data.Rows, "特征长度：", data.Cols)
+	err := model.PredictDense(data.Values, data.Rows, data.Cols, predictions, 0, 2)
 	if err != nil {
 		return EssayInfoArr, err
 	}
