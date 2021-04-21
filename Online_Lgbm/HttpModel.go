@@ -117,6 +117,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 
 	// 特征长度检验
 	if len(f.Values) != f.Rows*f.Cols {
+		fmt.Println(time.Now(), "特征总数：", len(f.Values), "文章篇数：", f.Rows, "特征长度：", f.Cols)
 		data := "ERROR：特征长度有误,总数为：" + string(len(f.Values)) + "文章数：" + string(f.Rows) + "每篇文章特征数：" + string(f.Cols)
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
