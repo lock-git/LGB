@@ -25,6 +25,7 @@ type result struct {
 type ModelReq struct {
 	Feature   string
 	ModelName string
+	TraceId   string
 }
 
 func ParseGZipString(str string) (string, error) {
@@ -47,57 +48,53 @@ func ParseGZipString(str string) (string, error) {
 
 func LgbPredict(w http.ResponseWriter, r *http.Request) {
 
-	_ = r.ParseForm()
-
-	var beginTime = time.Now().UnixNano() / 1e6
-	fmt.Println(time.Now(), "initModel_start...")
-
-	body, err1 := ioutil.ReadAll(r.Body)
-	if err1 != nil {
-		fmt.Printf("read body err, %v\n", err1)
+	var startTime = int32(time.Now().UnixNano() / 1e6)
+	body, ioErr := ioutil.ReadAll(r.Body)
+	if ioErr != nil {
+		fmt.Printf("read body err, %v\n", ioErr)
 		return
 	}
 	var modelReq ModelReq
-	err1 = json.Unmarshal(body, &modelReq)
-	if err1 != nil {
-		log.Println("json format error:", err1)
+	mErr := json.Unmarshal(body, &modelReq)
+	if mErr != nil {
+		log.Println("params json format error:", mErr)
 	}
-
-	//fmt.Println(modelReq)
-
 	defer r.Body.Close()
 
+	if len(modelReq.TraceId) == 0 {
+		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:traceId不能为nil"}
+		nilJsonErr, _ := json.Marshal(result)
+		_, _ = w.Write(nilJsonErr)
+		return
+	}
+	traceId := modelReq.TraceId
+
 	if len(modelReq.Feature) == 0 {
-		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:feature参数不能为nil"}
+		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR: traceId " + traceId + " feature参数不能为nil"}
 		nilJsonErr, _ := json.Marshal(result)
 		_, _ = w.Write(nilJsonErr)
 		return
 	}
 
 	if len(modelReq.ModelName) == 0 {
-		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR:modelName参数不能为nil"}
+		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: "ERROR: traceId " + traceId + " modelName参数不能为nil"}
 		nilJsonErr, _ := json.Marshal(result)
 		_, _ = w.Write(nilJsonErr)
 		return
 	}
 
-	//initModelErr := lgb_model.InitModel(r.Form["modelName"][0])
-	fmt.Println(modelReq.ModelName)
 	initModelErr := InitModel(modelReq.ModelName)
 	if initModelErr != nil {
-		data := "ERROR：初始化模型失败 " + initModelErr.Error()
+		data := "ERROR：traceId " + traceId + "模型名称为 " + modelReq.ModelName + " 初始化模型失败 " + initModelErr.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
 		_, _ = w.Write(errJson)
 		return
 	}
 
-	var initModelEndTime = int32(time.Now().UnixNano() / 1e6)
-	fmt.Println(time.Now(), "initModel_duration:", initModelEndTime-int32(beginTime), "ms")
-
 	parseFeature, parseGZipErr := ParseGZipString(modelReq.Feature)
 	if parseGZipErr != nil {
-		data := "ERROR：feature参数GZip解压失败 " + parseGZipErr.Error()
+		data := "ERROR：traceId " + traceId + " feature参数GZip解压失败 " + parseGZipErr.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
 		_, _ = w.Write(errJson)
@@ -108,7 +105,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	var json2 = jsonIter.ConfigCompatibleWithStandardLibrary
 	err := json2.UnmarshalFromString(parseFeature, &f)
 	if err != nil {
-		data := "ERROR：json格式有误 " + err.Error()
+		data := "ERROR：traceId " + traceId + " json格式有误 " + err.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
 		_, _ = w.Write(errJson)
@@ -117,8 +114,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 
 	// 特征长度检验
 	if len(f.Values) != f.Rows*f.Cols {
-		fmt.Println(time.Now(), "特征总数：", len(f.Values), "文章篇数：", f.Rows, "特征长度：", f.Cols)
-		data := "ERROR：特征长度有误,总数为：" + string(len(f.Values)) + "文章数：" + string(f.Rows) + "每篇文章特征数：" + string(f.Cols)
+		data := "ERROR：traceId " + traceId + " 特征长度有误,总数为：" + string(len(f.Values)) + "文章数：" + string(f.Rows) + "每篇文章特征数：" + string(f.Cols)
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
 		_, _ = w.Write(errJson)
@@ -127,7 +123,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 
 	predictData, predictErr := ForecastLgbV2(f)
 	if predictErr != nil {
-		data := "ERROR：model prediction fail " + predictErr.Error()
+		data := "ERROR：traceId " + traceId + " model prediction fail " + predictErr.Error()
 		result := result{Stamp: 0, Code: -1, Msg: "失败", Data: data}
 		errJson, _ := json.Marshal(result)
 		_, _ = w.Write(errJson)
@@ -138,8 +134,8 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(resultJsonStr)
 	}
 
-	var predictEndTime = int32(time.Now().UnixNano() / 1e6)
-	fmt.Println(time.Now(), "predict_duration:", predictEndTime-initModelEndTime, "ms", "get serve success")
+	var endTime = int32(time.Now().UnixNano() / 1e6)
+	fmt.Println(time.Now(), ",traceId:", traceId, ",lgb_predict_duration:", endTime-startTime, "ms", ",Get serve success")
 }
 
 /*
