@@ -135,7 +135,7 @@ func LgbPredict(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var endTime = int32(time.Now().UnixNano() / 1e6)
-	fmt.Println(time.Now(), ",traceId:", traceId, ",lgb_predict_duration:", endTime-startTime, "ms", ",Get serve success")
+	fmt.Println(time.Now(), "traceId:", traceId, "modelName:", modelReq.ModelName, ",lgb_predict_duration:", endTime-startTime, "ms", ",Get serve success")
 }
 
 /*
